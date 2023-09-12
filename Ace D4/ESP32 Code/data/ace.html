@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<!-- Original 3DPlot addapted from: https://library.fridoverweij.com/codelab/3d_function_plotter/3d_function_plotter_plainjs.html -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>ACE</title>
+		<meta name="description" content="ACE Badminton Shuttlecock Launcher"> 
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="simple.css">
+		<style>
+			#container { width:100%; height:400px; border:1px solid #ddd; margin:auto; }
+			#myCanvas { cursor:default; }
+			body header {
+					background:none;
+					border:0;
+					}
+			body {
+				grid-template-columns: 1fr min(45rem, 350px) 1fr;
+				font-size: 1rem;
+				line-height: 1rem;
+			  }
+			 section {
+				border: 0;
+				padding-bottom: 0;
+				margin-bottom: 1rem;
+				padding-top:0; 
+				margin-top:0;
+			 }
+		</style>	
+	</head>
+	<body>
+		<noscript>JavaScript is disabled. Use another browser or enable it.</noscript>
+
+		<header style="margin:0; padding:0;">
+			<div id = "statusBanner" name = "statusBanner" style="background:red; font-weight:bold; color:white; position:fixed; top: 0; padding-top:5px; padding-bottom:5px; width:100%; z-index:99">Not Connected</div>
+			<h1 style="padding-top:20px; margin-bottom:0px"><img src = "ace_logo.png" width = "150px"></h1>
+			<a href = "#" onclick="hideExcept('main')">Main</a>&emsp;
+			<a href = "#" onclick="hideExcept('setup')">Setup</a>&emsp;
+			<a href = "#" onclick="hideExcept('instructions')">Instructions</a>&emsp;
+		  </header>
+		  
+		<section id="main" > 
+			<p>Preset: <span id = "balance_output"></span></p>
+					<select name="preset" id="preset" value="0" onchange="loadPreset()" style="width:100%;">
+					  <option value="Doubles - Full Court">Doubles - Full Court</option>
+					  <option value="Doubles - Full Court - No Rotation">Doubles - Full Court - No Rotation</option>
+					  <option value="Doubles - Service Return">Doubles - Service Return</option>				  				  
+					  <option value="Singles - Full Court">Singles - Full Court</option>
+					  <option value="Singles - Full Court - No Rotation">Singles - Full Court - No Rotation</option>
+					  <option value="Singles - Service Return">Singles - Service Return</option>
+					  <option value="Calibration - Shuttle">Calibration - Shuttle</option>
+					  <option value="Calibration - Wheel Influence">Calibration - Wheel Influence</option>
+					</select>
+			<input type="radio" id="once" name="play_type" value="once" checked="checked"><label for="once" style="display:inline;padding-right:20px;">Play Once</label><input type="radio" id="repeat" name="play_type" value="repeat"><label for="repeat" style="display:inline;padding-right:20px;">Repeat</label>
+			<div style="display:inline-block">
+			<input type="radio" id="random_order" name="play_type" value="random_order"><label for="random_order" style="display:inline;padding-right:20px;">Mix Order</label><input type="radio" id="random_shots" name="play_type" value="random_shots"><label for="random_shot" style="display:inline;">Random Shots</label><br>
+			</div><br>
+
+
+			<div id="container">
+			<canvas id="myCanvas" width="1509" height="400">
+				HTML5 Canvas not supported
+			</canvas>
+			</div>
+			<p>Editing Shot: <span id = "shotID_output">No Shot Selected</span></p>
+			<p>Trajectory: <span id = "traj_output"></span>°</p>
+					<input id="traj_slider" type="range" min="-05" max="40" step="1" value="40" style="width:100%;" disabled >
+			<p>Rotation: <span id = "rot_output"></span>°<span id = "wheelRot_output" ></span>°</p>
+					<input id="rot_slider" type="range" min="-20" max="20" step="1" value="0" style="width:100%;" disabled>
+			<p>Default Delay (s): <span id = "delay_output"></span><button type = "button" onclick="updateTimes()"style="background:grey;float:right;margin:0px; padding:0.3em 0.5em;">Update Delays</button></p>
+					<input id="delay_slider" type="range" min="2" max="10" step=".25" value="3" style="width:100%;" >
+			<p>Global Launcher Height (m): <span id = "height_output"></span></p>
+					<input id="height_slider" type="range" min="0" max="2.5" step=".1" value="1.5" style="width:100%;" >
+			<p>Global Velocity Correction (%): <span id = "vel_correction_output"></span></p>
+					<input id="vel_correction_slider" type="range" min="-50" max="50" step="1" value="0" style="width:100%;" >
+			<p>Global Flight Correction (%): <span id = "flight_correction_output"></span></p>
+					<input id="flight_correction_slider" type="range" min="-50" max="50" step="1" value="0" style="width:100%;" >
+			<button type = "button" onclick="doSend('save_globals')" style="background:grey;float:right;margin:0px; padding:0.3em 0.5em;">Save Global Settings</button></p>
+		</section>
+		<section id = "setup" style="padding-top:0; margin-top:0;"> 
+			<h3>Setup & Calibration</h2>
+			Before installing any servo end effectors power up the system and go to the setup position. Then install the end effectors as follows:
+			<ol>
+				<li>Pusher to be installed in catch position</li>
+				<li>Gripper to be installed in closed position.</li>
+				<li>Turret rotation servo horn to be installed radially aligned.</li>
+				<li>Trajectory servo horn to be installed horizontal and pointing towards the front.</li>
+				
+			</ol>
+			<button type = "button" onclick="doSend('setup_pos')" style="background:red">Go to Setup Position</button>
+			<p>Gripper Open Position: </p><input type="text"  id="gripper_open_pos" value="" style="width:30%; text-align:center;"></input><button type = "button" onclick="doSend('setup_gripper_open')" style="background:blue">Open</button>
+			<p>Gripper Closed Position: </p><input type="text"  id="gripper_closed_pos" value="" style="width:30%; text-align:center;"></input><button type = "button" onclick="doSend('setup_gripper_close')" style="background:blue">Close</Button>
+			<p>Pusher Catch Position: </p><input type="text"  id="pusher_catch_pos" value="" style="width:30%; text-align:center;"></input><button type = "button" onclick="doSend('setup_pusher_catch')" style="background:blue">Catch</button>
+			<p>Pusher Push Position: </p><input type="text"  id="pusher_push_pos" value="" style="width:30%; text-align:center;"></input><button type = "button" onclick="doSend('setup_pusher_push')" style="background:blue">Push</Button>
+			<br><br>
+			<button type = "button" onclick="doSend('setup_save_servo')" style="background:orange">Save Servo Settings</button>
+			<br>
+			<h3>Trajectory Zero Correction</h3>
+			<p><i>Use a cellphone level finding app to level your launcher. Then use the 'Adjust' button with zero correction to to set the trajectory to zero and use the app to measure the wheel actual angle. 
+			Enter the correction value then verify after using the 'Adjust' button. Modify the value as needed until zero is measured. </i></p>
+			<p>Zero Point Correction:</p>
+			<input type="text"  id="setup_traj_correction" value="" style="width:30%; text-align:center;"></input>
+			<button type = "button" onclick="doSend('setup_traj_zero')" style="background:orange">Adjust</button><br>
+			<br>
+			<h3>Settings</h3>
+			<p>These settings can be adjusted for the current testing session but are not saved. They should be enabled for improved safety & operation.</p>
+			<p>Shuttle Feed Check:</p>
+			<input type="radio" id="sc_enabled" name="shuttle_check" value="enabled" checked="checked" onchange="doSend('setup_update_settings')"><label for="sc_enabled" style="display:inline;padding-right:20px;">Enabled</label><input type="radio" id="sc_disabled" name="shuttle_check" value="disabled" onchange="doSend('setup_update_settings')"><label for="sc_disabled" style="display:inline;padding-right:20px;">Disabled</label>
+			<p>Obstacle Check:</p>
+			<input type="radio" id="oc_enabled" name="obstacle_check" value="enabled" checked="checked" onchange="doSend('setup_update_settings')"><label for="oc_enabled" style="display:inline;padding-right:20px;">Enabled</label><input type="radio" id="oc_disabled" name="obstacle_check" value="disabled" onchange="doSend('setup_update_settings')"><label for="oc_disabled" style="display:inline;padding-right:20px;">Disabled</label>
+			<br>
+			<h3>ESC Calibration</h3>
+			<i>Please keep clear of motors and ensure they are free to spin in case there is an issue with the calibration or the speed control. If calibration is successful the motors will remain stationary and you'll hear the beeps as described. Motors must be connected to hear tones. These instructions are for a RC Electric Parts 30A ESC. Follow the instructions for your ESC if different.</i>
+			<br><b>Throttle Range Calibration</b>
+			<ol>
+				<li>Unplug the electronic speed controls from the battery.</li>
+				<li>Go to Max Throttle.</li>
+				<button type = "button" onclick="doSend('setup_esc_max')" style="background:green">Max. Throttle</button>
+				<li>Plug in the electronic speed control you wish to calibrate.</li>
+				<li>Before the 4 beeps that will sound elapse go to Min Throttle.</li>
+				<button type = "button" onclick="doSend('setup_esc_min')" style="background:red">Min. Throttle</Button>
+				<li>After a few seconds the motor will make 2 short beeps followed by 2 longer beeps to confirm throttle range calibration is set.</li>
+				<li>Unplug the esc to lock the settings.</li>
+			</ol>
+			<b>Brake Calibration</b>
+			<ol>
+				<li>Startup the system normally and check the brake tone. There should be 3 beeps indicating a 3 cell battery followed by 1 beep if the brake is on or a double beep if it's off. Continue only if the brake needs to be turned on.</li>
+				<li>Unplug the electronic speed controls from the battery.</li>
+				<li>Go to Max Throttle using the button below.</li>
+				<button type = "button" onclick="doSend('setup_esc_max')" style="background:green">Max. Throttle</button>
+				<li>Plug in the electronic speed control you wish to calibrate.</li>
+				<li>Allow the first 4 short beeps that will sound to elapse.</li>
+				<li>During the next set of 4, each set made of 3 rapid beeps, go to Min. Throttle using the button below. This will toggle the brake setting.</li>
+				<button type = "button" onclick="doSend('setup_esc_min')" style="background:red">Min. Throttle</Button>
+				<li>After a few seconds the motor will make 2 short beeps followed by 2 longer beeps to confirm brake setting is set to on.</li>
+				<li>Unplug the esc to lock the settings.</li>
+			</ol>
+			
+			
+			<h3>RPM Calibration</h3>
+			<p><i>This calibration can be done after the throttle range is set on the ESC using a tachometer. Test the low speed and high speeds and enter the results. After saving you can test the motor speeds for validation. </i></p>
+
+			<p>Low Speed (RPM):</p>
+			<input type="text"  id="setup_rpm_low_actual" value="" style="width:30%; text-align:center;"></input>
+			<button type = "button" onclick="doSend('setup_low_speed')" style="background:green">Run</button>
+			<button type = "button" onclick="doSend('setup_esc_min')" style="background:red">Stop</Button>
+			<p>High Speed (RPM):</p>			
+			<input type="text"  id="setup_rpm_high_actual" value="" style="width:30%; text-align:center;"></input>
+			<button type = "button" onclick="doSend('setup_high_speed')" style="background:green">Run</button>
+			<button type = "button" onclick="doSend('setup_esc_min')" style="background:red">Stop</Button>
+			<br>			
+			<button type = "button" onclick="doSend('setup_adjust_rpm')" style="background:orange">Adjust & Save</button>			
+			<p>Motor Speed Check (RPM):</p>
+			<input type="text"  id="setup_rpm" value="" style="width:30%; text-align:center;"></input>			
+			<button type = "button" onclick="doSend('setup_rpm_run')" style="background:green">Run</button>
+			<button type = "button" onclick="doSend('setup_esc_min')" style="background:red">Stop</button>
+			
+		</section>
+		<section id = "instructions" style="padding-top:0; margin-top:0;"> 
+			<h3>Instructions</h2>
+			<p>The ACE shuttlecock launcher is used as a badminton trainer and can be configured for many different patterns. This section contains basic use instructions.</p>
+			
+			Basic Operation:
+			<ol>
+				<li>Select a preset. This loads in shots which can be used as-is or adjusted in the next steps.</li>
+				<li>Select a play type. 'Play Once' runs the selected shot pattern a single time. 'Repeat' continues to run the shot pattern back to back. 'Mix Order' runs the selected shots but randomizes the order. 'Random Shots' plays any of the 9 shots in any order.</li>
+				<li>Adjust the preset shots based on your training needs. For more details see the section 'Adjusting Shots'.</li>
+				<li>To prepare a shot pattern tap/click on the desired shot marker on the court in order of play. Shots will load in with the time delay controlled by the 'Default Delay Slider'. Shot specific delays can be adjusted by tapping/clicking on the grey time delay marker in the shot pattern.</li>		
+				<li>Once the pattern is entered press the play button to start feeding, and the stop button to stop feeding.</li>
+			</ol>
+			Navigation:
+			<ul>
+				<li>The court can be moved around using two fingers to pan. Right click on PC.</li>
+				<li>The court size can be controlled by using two fingers to zoom in/out. Scroll on PC.</li>
+				<li>The court can be rotated using one finger to drag in any area without an active shot marker or button. Left click on PC.</li>	
+			</ul>
+			Adjusting Shots:
+			<ol>
+				<li>Press on a shot marker on the court and drag it to the desired shot position. The shot parameters should load in to the editing window and all other shots should fade.</li>
+				<li>Adjust the trajectory to achieve the desired flight profile.</li>
+				<li>Adjust the rotation to control the physical launcher rotation during the shot. Wheel correction shows the amount of angle the system will try to acheive using the speed difference between the launching wheels. For highest accuracy minimize this value.</li>
+				<li>Shots that are red cannot be achieved based on the current angle and rotation values. Either the launcher is rotated to far away from the landing position, or the trajectory is too high/low to allow the shot to acheive the required distance. </li>		
+			</ol>
+			
+		</section>
+		<script>
+			"use strict";
+			
+			// Net "pixel" dimensions 
+			var pixelWidth = 3;
+			
+			//General 3D Plot Scale
+			var scale = 30; // a scale factor //24 default
+			
+			//Set allowable wheel correction in degrees - how much angle can be imparted by the wheels through mismatched speed.
+			var maxWheelCorrection = 100;//disable angular limit
+			var minWheelSpeed = 900;//RPM minimum for the wheels. This will limit the max velocity & wheel correction.
+			var maxWheelSpeed = 8000;//RPM maximum for the wheels. This will limit the max velocity & wheel correction.
+
+			// Default view rotation angle [rad] 
+			var rotx = 135/180 * Math.PI;
+			var roty = 35/180 * Math.PI;
+			var rotz = 150/180 * Math.PI; 
+
+			// Variables to suppart shifting the court center position in the plot. Assigned later.
+			var translateX=0;
+			var translateY=0;
+			
+			// Default launcher position.
+			var launcherX = 0;
+			var launcherY = -2;
+			var launcherZ = 1.5;
+			var vel_correction = 0;
+			var flight_correction = 0;
+
+			
+			var nodes =[]; // Net pixel positions
+			var lines =[]; // Court and net border lines
+			var nodesAxes =[]; // Axis indicators
+			var shotPreset = [
+								{preset:"Calibration - Shuttle", x:0, y:4, rotation:0, trajectory:10},
+								{preset:"Calibration - Shuttle", x:0, y:4, rotation:0, trajectory:20},
+								{preset:"Calibration - Shuttle", x:0, y:4, rotation:0, trajectory:30},
+								{preset:"Calibration - Wheel Influence", x:-1, y:4, rotation:0, trajectory:30},
+								{preset:"Calibration - Wheel Influence", x:2, y:4, rotation:0, trajectory:30},						
+								{preset:"Doubles - Full Court", x:-2.51, y:1.3, rotation:-20, trajectory:5},
+								{preset:"Doubles - Full Court", x:0, y:1.3, rotation:0, trajectory:5},
+								{preset:"Doubles - Full Court", x:2.51, y:1.3, rotation:20, trajectory:5},
+								{preset:"Doubles - Full Court", x:-2.51, y:4, rotation:-20, trajectory:20},
+								{preset:"Doubles - Full Court", x:0, y:4, rotation:0, trajectory:20},
+								{preset:"Doubles - Full Court", x:2.51, y:4, rotation:20, trajectory:20},
+								{preset:"Doubles - Full Court", x:-2.51, y:6.18, rotation:-20, trajectory:30},
+								{preset:"Doubles - Full Court", x:0, y:6.18, rotation:0, trajectory:30},
+								{preset:"Doubles - Full Court", x:2.51, y:6.18, rotation:20, trajectory:30},
+								{preset:"Doubles - Full Court - No Rotation", x:-2.51, y:1.3, rotation:0, trajectory:5},
+								{preset:"Doubles - Full Court - No Rotation", x:0, y:1.3, rotation:0, trajectory:5},
+								{preset:"Doubles - Full Court - No Rotation", x:2.51, y:1.3, rotation:0, trajectory:5},
+								{preset:"Doubles - Full Court - No Rotation", x:-2.51, y:4, rotation:0, trajectory:20},
+								{preset:"Doubles - Full Court - No Rotation", x:0, y:4, rotation:0, trajectory:20},
+								{preset:"Doubles - Full Court - No Rotation", x:2.51, y:4, rotation:0, trajectory:20},
+								{preset:"Doubles - Full Court - No Rotation", x:-2.51, y:6.18, rotation:0, trajectory:30},
+								{preset:"Doubles - Full Court - No Rotation", x:0, y:6.18, rotation:0, trajectory:30},
+								{preset:"Doubles - Full Court - No Rotation", x:2.51, y:6.18, rotation:0, trajectory:30},
+								{preset:"Doubles - Service Return", x:-2.51, y:2.5, rotation:-15, trajectory:10},
+								{preset:"Doubles - Service Return", x:-0.5, y:2.5, rotation:-15, trajectory:10},
+								{preset:"Doubles - Service Return", x:0.5, y:2.5, rotation:15, trajectory:10},
+								{preset:"Doubles - Service Return", x:2.51, y:2.5, rotation:15, trajectory:10},
+								{preset:"Doubles - Service Return", x:-2.51, y:5.42, rotation:-15, trajectory:30},
+								{preset:"Doubles - Service Return", x:-0.5, y:5.42, rotation:-15, trajectory:30},
+								{preset:"Doubles - Service Return", x:0.5, y:5.42, rotation:15, trajectory:30},
+								{preset:"Doubles - Service Return", x:2.51, y:5.42, rotation:15, trajectory:30},
+								{preset:"Singles - Full Court", x:-2.05, y:1.3, rotation:-20, trajectory:5},
+								{preset:"Singles - Full Court", x:0, y:1.3, rotation:0, trajectory:5},
+								{preset:"Singles - Full Court", x:2.05, y:1.3, rotation:20, trajectory:5},
+								{preset:"Singles - Full Court", x:-2.05, y:4, rotation:-20, trajectory:20},
+								{preset:"Singles - Full Court", x:0, y:4, rotation:0, trajectory:20},
+								{preset:"Singles - Full Court", x:2.05, y:4, rotation:20, trajectory:20},
+								{preset:"Singles - Full Court", x:-2.05, y:6.18, rotation:-20, trajectory:30},
+								{preset:"Singles - Full Court", x:0, y:6.18, rotation:0, trajectory:30},
+								{preset:"Singles - Full Court", x:2.05, y:6.18, rotation:20, trajectory:30},
+								{preset:"Singles - Full Court - No Rotation", x:-2.05, y:1.3, rotation:0, trajectory:5},
+								{preset:"Singles - Full Court - No Rotation", x:0, y:1.3, rotation:0, trajectory:5},
+								{preset:"Singles - Full Court - No Rotation", x:2.05, y:1.3, rotation:0, trajectory:5},
+								{preset:"Singles - Full Court - No Rotation", x:-2.05, y:4, rotation:0, trajectory:20},
+								{preset:"Singles - Full Court - No Rotation", x:0, y:4, rotation:0, trajectory:20},
+								{preset:"Singles - Full Court - No Rotation", x:2.05, y:4, rotation:0, trajectory:20},
+								{preset:"Singles - Full Court - No Rotation", x:-2.05, y:6.18, rotation:0, trajectory:30},
+								{preset:"Singles - Full Court - No Rotation", x:0, y:6.18, rotation:0, trajectory:30},
+								{preset:"Singles - Full Court - No Rotation", x:2.05, y:6.18, rotation:0, trajectory:30},
+								{preset:"Singles - Service Return", x:-2.05, y:2.5, rotation:-15, trajectory:10},
+								{preset:"Singles - Service Return", x:-0.5, y:2.5, rotation:-15, trajectory:10},
+								{preset:"Singles - Service Return", x:0.5, y:2.5, rotation:15, trajectory:10},
+								{preset:"Singles - Service Return", x:2.05, y:2.5, rotation:15, trajectory:10},
+								{preset:"Singles - Service Return", x:-2.05, y:6.18, rotation:-15, trajectory:30},
+								{preset:"Singles - Service Return", x:-0.5, y:6.18, rotation:-15, trajectory:30},
+								{preset:"Singles - Service Return", x:0.5, y:6.18, rotation:15, trajectory:30},
+								{preset:"Singles - Service Return", x:2.05, y:6.18, rotation:15, trajectory:30},
+							];
+			
+			var shots = []; // Currently loaded shot options
+			
+			var shotPattern = []; // Shot pattern selected by the user
+			
+			var cont = document.getElementById('container'); //Obtain a reference to the container that holds the canvas element.
+			var canvas  = document.getElementById("myCanvas"); // Obtain a reference to the canvas element.
+			var ctx = canvas.getContext("2d"); // Obtain a 2D context from the canvas element.
+			
+			var launcherStopped = true;
+			
+			sizeCanvas(); // Setup the canvas size and zero position through court translation.	
+			
+			// Add the eventlisteners for the canvas to control interactions
+			cont.addEventListener("mousedown", handleMousedown, false);	
+			cont.addEventListener("touchstart", handleMousedown, false);	
+			cont.addEventListener("contextmenu", handleMousedown, false);	
+			document.addEventListener("mouseup", handleMouseup, false);	
+			cont.addEventListener("mousemove", handleMove, false);
+			cont.addEventListener("touchmove", handleMove, false);	
+			document.addEventListener("touchcancel", handleMouseup, false);
+			document.addEventListener("touchend", handleMouseup, false);
+			//canvas.addEventListener("scroll", handleScroll, false);	
+			
+			/*
+			// Cycle through shots and update the shot velocity based on target positions.
+			// this accounts for bad velocity data stored in shot or updated algorithms.
+			for(var i = 0;i<shots.length;i++){
+				var result = findVelocityFromIC(shots[i]);
+				shots[i].v0=result.v;
+				shots[i].validSolve = result.validSolve;
+				shots[i].lm_speed = result.lm_speed;
+				shots[i].rm_speed = result.rm_speed;				
+			}
+			*/
+			
+			// *** Mouse rotate. ***	
+			var mouseX = 0, mouseY = 0, pmouseX, pmouseY; // mouseX is current mouse x-coordinate, pmouseX is previous mouse x-coordinate when it was 1 pixel different.  
+			var pDistance=0; //distance between two touch points.
+			// Figure must rotate iff mousemove AND mousedown (for mouse devices):
+			var mouseDown = false; // Is mouse or touch currently occuring.
+			var hitShotMarker = -1; 
+			var pHitShotMarker = -1;
+			var wasMoved=false; // Did a move occur during the touch or mousedown event.
+			var scaleSensitivity=1;
+			var rotateSensitivity=100;
+			var scrollSensitivity= 100;
+			
+			canvas.onmousewheel=function handleScroll(e){
+				e.preventDefault();
+				scale=scale + e.wheelDelta/scrollSensitivity;
+				drawFunction();
+			}
+			
+			function hitTestCircle(testX, testY, circleX, circleY, radius){					
+					var dx = testX - circleX;
+					var dy = testY - circleY;
+					if (dx*dx + dy*dy < radius * radius) {
+						
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}
+			function updateTimes(){
+				for (var i=0; i < shotPattern.length; i++) {
+					shotPattern[i].delay = defaultDelay; 					
+				}
+				// Redraw the canvas
+				drawFunction();
+			}
+			
+			// Handle both touch and mouse up events.
+			function handleMouseup(e){
+				if(mouseDown) mouseDown = false; 
+				canvas.style.cursor = "default"; 				
+				
+				// If nothing was moved but a shot marker was hit then add that shot to the shot pattern.
+				if(!wasMoved &  hitShotMarker!=-1){					
+					shotPattern.push({shotID:hitShotMarker,delay:defaultDelay, displayX:0, displayY:0});
+				}
+				// If there was simple click, but it was not on a shot markerthen clear shot focus view.
+				else if (!wasMoved){					
+					pHitShotMarker = -1;
+					clearShotSliders();
+				}
+				
+				// Redraw the canvas
+				drawFunction();
+				
+				hitShotMarker = -1; // Clear the current hit marker variable.
+				pDistance=0;  // Set the distance between touch points to 0.
+				
+				//clear the wasMoved flag to cover when two finger pan is ended when one figer is lifted.
+				wasMoved=true;
+			}
+			
+			var mouseDownTime;
+			
+			// Handle both touch and mouse down events.
+			function handleMousedown(e) {
+				
+				mouseDownTime = Date.now();
+				
+				if(!mouseDown) mouseDown = true;
+				wasMoved=false;
+				
+				
+				
+				// Store the click x,y or first touch points x,y.
+				var x = parseFloat(e.pageX) || parseFloat(e.changedTouches[0].pageX);
+				var y = parseFloat(e.pageY) || parseFloat(e.changedTouches[0].pageY);
+				mouseX = x;
+				mouseY = y;
+				e.preventDefault();
+							
+				// Convert the screen x, y to canvas x,y.
+				var relativePosition = getCanvasRelative(e);
+				
+				// Prepare variables to track clicks on the users pattern markers.
+				var hitPatternMarker = -1;
+				var hitPatternDelayMarker = -1;
+				
+				// hit test stop/play button.
+				var circleX = canvas.width - 25-translateX;
+				var circleY = canvas.height - 25-translateY;				
+				if (hitTestCircle(relativePosition.x,relativePosition.y, circleX, circleY, 20)) 
+				{
+					if (launcherStopped)
+					{
+						if (  shotPattern.length>0){
+							console.log("Starting Feed!");
+							doSend('start');
+							launcherStopped=false;
+						}
+						else{
+							alert("Please create a shot pattern by clicking the shot markers on the court in the desired shot order.", "Missing Shot Pattern");
+						}
+					}
+					else
+					{
+						console.log("Stoping Feed!");
+						doSend('stop');
+						launcherStopped=true;
+					}
+					
+				}
+				
+				
+				// hit test shot pattern markers
+				for (var i=0; i <= shotPattern.length; i++) {			
+					var shotsPerRow = Math.floor((canvas.width-25)/70);
+					var row = Math.floor(i/shotsPerRow);
+					var x = 45-translateX -row*(shotsPerRow*70) + 70*i ;
+					var y = 25-translateY +row*50 ;
+					
+					// If the for loop is still within the shot pattern range (not the clear button) then check for a hit on the delay circle.
+					if (i<shotPattern.length){
+						// Hit test the shot pattern markers delay circle
+						if (hitTestCircle(relativePosition.x,relativePosition.y, x+25, y+10, 15)) {
+							let delay = prompt("Enter delay after shot in seconds: [2-10s]", shotPattern[i].delay);
+							if (isFinite(delay) && delay>=2 && delay<=10) shotPattern[i].delay = Math.round(delay*10)/10;
+							handleMouseup(e);							
+						}
+					}
+
+					// Check if the shot pattern marker or clear all button has been clicked.				
+					if (hitTestCircle(relativePosition.x,relativePosition.y, x, y, 15)) {
+						//console.log("Pattern Marker Hit!");
+							if (i<shotPattern.length){
+								shotPattern.splice(i,1);
+							}
+							else shotPattern = [];
+					}					
+				}
+				
+				// hit test on-court shot markers
+				for (var i=0; i < shots.length; i++) {
+					if (hitTestCircle(relativePosition.x,relativePosition.y, shots[i].displayX, shots[i].displayY, 20)) {
+						hitShotMarker = i;
+						pHitShotMarker = i;
+						//console.log("Hit!");
+						loadShotToSliders();
+					}
+				}
+			};
+
+			var panScaleActive = false;
+			
+			// Handle both touch and mouse move events.
+			function handleMove(e) {
+				
+				// Store the last known x,y positions	
+				pmouseX = mouseX;
+				pmouseY = mouseY;
+				
+				// Get the new mouse x,y or first touch points x,y.
+				var x = parseFloat(e.pageX) || parseFloat(e.changedTouches[0].pageX);
+				var y = parseFloat(e.pageY) || parseFloat(e.changedTouches[0].pageY);	
+
+				mouseX = x;
+				mouseY = y;
+				
+				// Get the amount moved.
+				var dx = mouseX - pmouseX;
+				var dy = mouseY - pmouseY;
+				
+				//limit move value. Limits touch jumps when number of touches changes unexpectedly.
+				dx = Math.min(Math.max(dx,-5),5);
+				dy = Math.min(Math.max(dy,-5),5);
+				
+				if (!wasMoved){
+					dx = 0;
+					dy = 0;
+				}	
+				
+				if (Date.now()-mouseDownTime<100){
+					dx = 0;
+					dy = 0;
+					wasMoved=false;
+					//console.log("clicked!");
+				}
+				else{
+					wasMoved=true;
+					//console.log("moved!");
+				}
+						
+				
+				
+				//Check if the left mouse was used or if two fingers were used.
+				if(e.which === 3 || (typeof e.touches !== 'undefined' && e.touches.length > 1)){
+					canvas.style.cursor = "move";
+													
+					//Translate the canvas by the amount moved & update the translate variables for accurate relative calculations.
+					if (panScaleActive == true){
+						translateX +=dx;
+						translateY +=dy;
+						ctx.translate(dx, dy );
+					}
+					
+					//If it's a two finger touch scaling may be required.
+					if(typeof e.touches !== 'undefined' && e.touches.length == 2){
+						//if it is a two finger touch, monitor the distance between the two touches and use that to scale.
+						var x2 = parseFloat(e.changedTouches[1].pageX);
+						var y2 = parseFloat(e.changedTouches[1].pageY);
+						var distance = Math.sqrt(Math.pow(y2-y,2)+Math.pow(x2-x,2));
+						
+						// Update the scaling to allow zoom
+						if(pDistance>0)	scale=scale*((1-pDistance/distance)/scaleSensitivity+1);
+						pDistance=distance;
+					}
+					drawFunction();
+					panScaleActive=true;
+				}
+				//Check if a single touch or click was used.
+				else if (e.which === 1 || (typeof e.touches !== 'undefined' && e.touches.length == 1)){
+					
+					//If two fingers were last registered but only one finger is active now then set dx,dy to zero to avoid jumps.
+					if (panScaleActive == true){
+						dx = 0;
+						dy = 0;
+						panScaleActive=false;
+					}					
+					
+					// If a shot marker was clicked then drag that shot marker.
+					if (hitShotMarker!=-1 && wasMoved==true) {
+						
+						var courtLocation = getCourtPosition(e);
+						shots[hitShotMarker].x = courtLocation[0].x;
+						shots[hitShotMarker].y= courtLocation[0].y;
+
+						// Limit the allowable position to just outside the court.
+						if (shots[hitShotMarker].x<-3.5) shots[hitShotMarker].x = -3.5;
+						if (shots[hitShotMarker].x>+3.5) shots[hitShotMarker].x = +3.5;
+						if (shots[hitShotMarker].y<0) shots[hitShotMarker].y = 0;
+						if (shots[hitShotMarker].y>+7) shots[hitShotMarker].y = +7;
+						
+						//recalculate_required = true;
+						/*
+						// Solve the parameters required to make the shot and determine if the new position is possible.
+						var result = findVelocityFromIC(shots[hitShotMarker]);
+						shots[hitShotMarker].v0=result.v;
+						shots[hitShotMarker].validSolve = result.validSolve;
+						shots[hitShotMarker].lm_speed = result.lm_speed;
+						shots[hitShotMarker].rm_speed = result.rm_speed;
+						*/
+						recalculate();
+					}
+					// Rotate the view if no shot marker was selected.
+					else{
+						canvas.style.cursor = "grabbing";
+						rotx = rotx + (dy)/rotateSensitivity;
+						roty = roty + (dx)/rotateSensitivity;
+						//console.log ("rotation x: " + Math.round(rotx/Math.PI*180*10)/10+" y: " + Math.round(roty/Math.PI*180*10)/10+" z: " + Math.round(rotz/Math.PI*180*10)/10);
+						drawFunction();
+					}				
+				}
+				
+				// Redraw everything
+				
+				
+				e.preventDefault();
+				e.stopPropagation();
+			};
+
+			//Helper function to get canvas relative position
+			var getCanvasRelative = function (e) {
+				var canvas = e.target,
+				bx = canvas.getBoundingClientRect();
+				var x = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX) - bx.left,
+				 y = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY) - bx.top;
+				
+				 //Correct for canvas transforms
+				 x = x - translateX;
+				 y = y - translateY;
+
+				return {
+					x: x,
+					y: y,
+					bx: bx
+				};
+			};
+
+			
+			
+			function sizeCanvas() {	
+				/// Make size of canvas equal to size container and move canvas to center
+				var cs = getComputedStyle(cont);
+				/// these will return dimensions in *pixel* regardless of what
+				/// you originally specified for container:
+				canvas.width = parseFloat(cs.getPropertyValue('width'), 10);
+				canvas.height = parseFloat(cs.getPropertyValue('height'), 10);
+				translateX= canvas.width/4;
+				translateY=canvas.height/1.6;
+				ctx.translate(translateX, translateY );	
+			};
+
+			//recalculate all the shot parameters then redraw the display
+			function recalculate(){
+			//Draw the shot markers
+				for(var i=0; i<shots.length; i++){	
+					// Solve the shots and update the parameters.
+					console.log("----- Shot " + (i+1) + " Index " + i + " -----");
+					var result = findVelocityFromIC(shots[i]);
+					shots[i].v0=result.v;
+					shots[i].validSolve = result.validSolve;
+					shots[i].lm_speed = result.lm_speed;
+					shots[i].rm_speed = result.rm_speed;					
+				}
+				drawFunction();
+			}
+			function drawFunction() {
+				// Clear the canvas
+				ctx.clearRect(-canvas.width- translateX, -canvas.height- translateY, 2*canvas.width, 2*canvas.height);
+								
+				// Setup the court lines
+				// Court shortened on launcher side to just past T-lines. -3.5 vs -6.680
+				lines = [	    
+				//singles width lines
+				{x:-2.55, y:-3.5, z:0.0}, 
+				{x:-2.55, y:6.680, z:0.0},
+				{x:2.55, y:-3.5, z:0.0}, 
+				{x:2.55, y:6.680, z:0},
+				//doubles width lines
+				{x:-3.01, y:-3.5, z:0.0},
+				{x:-3.01, y:6.680, z:0.0},
+				{x:3.01, y:-3.5, z:0.0},
+				{x:3.01, y:6.680, z:0},
+				//Service lines
+				{x:-3.01, y:2.000, z:0},
+				{x:3.01, y:2.000, z:0},
+				{x:-3.01, y:5.920, z:0},
+				{x:3.01, y:5.920, z:0},
+				{x:0, y:2.000, z:0},
+				{x:0, y:6.680, z:0},
+				{x:-3.01, y:-2.000, z:0},
+				{x:3.01, y:-2.000, z:0},
+				//{x:-3.01, y:-5.920, z:0},
+				//{x:3.01, y:-5.920, z:0},
+				{x:0, y:-2.000, z:0},
+				{x:0, y:-3.5, z:0},
+				//Rear lines
+				//{x:-3.01, y:-6.680, z:0},
+				//{x:3.01, y:-6.680, z:0},
+				{x:-3.01, y:6.680, z:0},
+				{x:3.01, y:6.680, z:0},
+				//Court Center Line
+				{x:-3.01, y:0.0, z:0},
+				{x:3.01, y:0.0, z:0},
+				//Net
+				{x:-3.01, y:0.0, z:0},
+				{x:-3.01, y:0.0, z:1.55},
+				{x:3.01, y:0.0, z:0},
+				{x:3.01, y:0.0, z:1.55},
+				{x:-3.01, y:0.0, z:1.55},
+				{x:3.01, y:0.0, z:1.55},
+				{x:-3.01, y:0.0, z:0.79},
+				{x:3.01, y:0.0, z:0.79},
+				];
+				
+				//Create the net point array
+				var i = 0;
+				for (var x = -2.9; x <= 3; x += .1) {
+					for (var z = 0.9; z <= 1.55; z += .1) {
+						nodes[i] = {x:x, y:0, z:z};
+						++i;
+					}
+				}
+				
+				//Setup the court surface
+				// Court shortened on launcher side to just past T-lines. -3.5 vs -6.680
+				var courtSurface = [	    
+				{x:-3.01, y:-3.5, z:0.0},
+				{x:3.01, y:-3.5, z:0.0},
+				{x:3.01, y:6.680, z:0.0},
+				{x:-3.01, y:6.680, z:0.0}];
+				
+				//Setup the axis markers
+				nodesAxes[0] = {x:0, y:0, z:0};
+				nodesAxes[1] = {x:3.5, y:0, z:0};
+				nodesAxes[2] = {x:0, y:7, z:0};
+				nodesAxes[3] = {x:0, y:0, z:2};
+				
+				//Setup the launcher height position
+				var launcherPosition = [{x:launcherX, y:launcherY, z:0},{x:launcherX, y:launcherY, z:launcherZ},{x:launcherX+.5, y:launcherY, z:launcherZ+1.5}];
+				
+				
+				//Rotate all the points based on the current viewing perpsective.
+				rotatePointCloud(lines);
+				rotatePointCloud(courtSurface);
+				rotatePointCloud(nodes);
+				rotatePointCloud(nodesAxes);
+				rotatePointCloud(launcherPosition);
+								
+				// Setup defaults
+				ctx.strokeStyle = "black";
+				ctx.lineCap = "round";
+				ctx.lineJoin = "round";				
+				ctx.globalAlpha = 0.7;
+				ctx.textBaseline = "middle";
+				ctx.textAlign = "center";
+				
+				//Draw the court surface				
+				ctx.fillStyle = '#F5F4F6';
+				ctx.beginPath();
+				ctx.moveTo(courtSurface[0].x*scale,courtSurface[0].y*scale);
+				ctx.lineTo(courtSurface[1].x*scale,courtSurface[1].y*scale);
+				ctx.lineTo(courtSurface[2].x*scale,courtSurface[2].y*scale);
+				ctx.lineTo(courtSurface[3].x*scale,courtSurface[3].y*scale);
+				ctx.closePath();
+				ctx.fill();
+
+				//Draw the axis direction markers
+				ctx.font = "16px Arial";
+				ctx.fillStyle = "black";
+				ctx.lineWidth = 1;
+				ctx.beginPath();
+				ctx.moveTo(nodesAxes[0].x*scale,nodesAxes[0].y*scale);
+				ctx.lineTo(nodesAxes[1].x*scale,nodesAxes[1].y*scale);
+				ctx.stroke();      
+				ctx.fillText('x',nodesAxes[1].x*scale,nodesAxes[1].y*scale);	
+				ctx.beginPath();
+				ctx.moveTo(nodesAxes[0].x*scale,nodesAxes[0].y*scale);
+				ctx.lineTo(nodesAxes[2].x*scale,nodesAxes[2].y*scale);
+				ctx.stroke();
+				ctx.fillText('y',nodesAxes[2].x*scale,nodesAxes[2].y*scale);		
+				ctx.beginPath();
+				ctx.moveTo(nodesAxes[0].x*scale,nodesAxes[0].y*scale);
+				ctx.lineTo(nodesAxes[3].x*scale,nodesAxes[3].y*scale);
+				ctx.stroke();
+				ctx.fillText('z',nodesAxes[3].x*scale,nodesAxes[3].y*scale);
+				
+				//Draw the launcher position
+				ctx.globalAlpha = 1;
+				ctx.lineWidth = 3;
+				ctx.fillStyle = "#1663BE";
+				ctx.strokeStyle = "#1663BE";
+				ctx.font = "bold 20px Arial";	
+				ctx.beginPath();
+				ctx.moveTo(launcherPosition[0].x*scale,launcherPosition[0].y*scale);
+				ctx.lineTo(launcherPosition[1].x*scale,launcherPosition[1].y*scale);
+				ctx.stroke();
+				ctx.fillText(launcherZ + 'm',launcherPosition[2].x*scale,(launcherPosition[2].y)*scale);
+				
+				
+				//Draw the court lines	
+				ctx.globalAlpha = 0.7;
+				for (var i=0; i < lines.length-1; i+=2) {
+					ctx.strokeStyle = "Black";
+					ctx.lineWidth = 2;
+					ctx.beginPath();
+					ctx.moveTo(lines[i].x*scale,lines[i].y*scale);
+					ctx.lineTo(lines[i+1].x*scale,lines[i+1].y*scale);
+					ctx.stroke();
+				}
+				
+
+				
+				
+				//Draw the shot markers
+				for(var i=0; i<shots.length; i++){
+				
+					//Continue with the plotting
+					var shot = shots[i];
+					var shotLocator = [{x:shot.x, y:shot.y, z:0}];
+					rotatePointCloud(shotLocator);
+							
+					//store shot display position for hit testing.		
+					shots[i].displayX = shotLocator[0].x*scale;
+					shots[i].displayY = shotLocator[0].y*scale;
+					
+					// If no shot marker is hit or if the shot marker being drawn is hit then make it solid, else make it 50% transparent.
+					if (pHitShotMarker == i || pHitShotMarker == -1) ctx.globalAlpha = 1;
+					else ctx.globalAlpha = 0.5;
+					
+					//Draw the round marker
+					ctx.beginPath();
+					ctx.arc(shots[i].displayX, shots[i].displayY, 15, 0, Math.PI*2);
+					ctx.closePath();
+					ctx.fillStyle = "#1663BE";
+					ctx.fill();
+					ctx.lineWidth = 4;
+					if (shot.validSolve) ctx.strokeStyle = "#50C878"; //If it's a valid solve circle it in green.
+					else ctx.strokeStyle = "red"; //if it's not a valid solve circle it in red
+					ctx.stroke();		
+					
+					//Draw marker numbers
+					ctx.font = "20px Arial";				
+					ctx.fillStyle = "white";
+					if(i == 9){ 
+						ctx.fillText("C", shots[i].displayX,shots[i].displayY);
+					}
+					else{ 
+						ctx.fillText(i+1, shots[i].displayX,shots[i].displayY);
+					}
+				}
+				
+				
+				
+				// Draw the net
+				// sort the nodes by their z value so that the "deepest" nodes are drawn first and those closest to the viewer are drawn last. 
+				nodes.sort(function(a, b){return a.z-b.z});		
+				for (var i=0; i < nodes.length; i++) {
+					ctx.fillStyle = "#CCCCCC";
+					// the "pixels" are small rectangles which is faster than rendering small circles.
+					ctx.beginPath();
+					ctx.fillRect(nodes[i].x*scale,nodes[i].y*scale,pixelWidth,pixelWidth)
+					ctx.stroke();
+				}
+				
+				
+								
+				//plot all of the shots
+				ctx.globalAlpha = 1;
+				for(var i=0; i<shots.length; i++){
+					//Calculate flight path based on current shot paramters
+					var flightPath=computeTrajectoryFromIC(0,launcherZ,shots[i].v0,shots[i].trajectory/180*Math.PI); //r0 , z0 , V0 , theta0
+					var points=[];		
+					//points.length=0;
+					
+					var requiredRotation = Math.atan((shots[i].x -launcherX)/(shots[i].y-launcherY))/Math.PI*180;
+					var shotFinalRotation = parseFloat(shots[i].rotation)+ Math.min(Math.max(requiredRotation-shots[i].rotation,-maxWheelCorrection),maxWheelCorrection);
+					
+						
+					//Create chart points of flight path with appropriate scaling, transforms, etc.
+					for (var j = 0; j < flightPath.rf.length; j ++)
+					{
+					  points.push({x:(flightPath.rf[j]*Math.sin(shotFinalRotation/180*Math.PI)+launcherX)*scale, y:(flightPath.rf[j]*Math.cos(shotFinalRotation/180*Math.PI)+launcherY)*scale,z:flightPath.zf[j]*scale});
+					}
+
+					//adjust for view orientation
+					rotatePointCloud(points);
+					if (pHitShotMarker == i || pHitShotMarker == -1) ctx.globalAlpha = 1;
+					else ctx.globalAlpha = 0.2;
+
+					if (shots[i].validSolve) ctx.strokeStyle = "#50C878"; //If it's a valid solve circle it in green.
+					else ctx.strokeStyle = "red"; //if it's not a valid solve circle it in red
+					ctx.lineWidth = 3;
+					ctx.beginPath();
+					// move to the first point
+					ctx.moveTo(points[0].x, points[0].y);
+
+				   for (var j = 1; j < points.length - 2; j ++)
+				   {
+					  var xc = (points[j].x + points[j + 1].x) / 2;
+					  var yc = (points[j].y + points[j + 1].y) / 2;
+					  ctx.quadraticCurveTo(points[j].x, points[j].y, xc, yc);
+				   }
+					// curve through the last two points
+					//ctx.quadraticCurveTo(points[j].x, points[j].y, points[j+1].x,points[j+1].y);
+					//Chart the points
+					ctx.stroke();
+				}
+				ctx.globalAlpha = 1;
+				
+				//Draw the shot pattern
+				for(var i=0; i<shotPattern.length; i++){
+					var shotsPerRow = Math.floor((canvas.width-25)/70);
+					var row = Math.floor(i/shotsPerRow);
+					var x = 45-translateX -row*(shotsPerRow*70) + 70*i ;
+					var y = 25-translateY +row*50 ;
+					
+					shotPattern[i].displayX = x;
+					shotPattern[i].displayY = y;
+					
+					var shotID = shotPattern[i].shotID;		
+					ctx.beginPath();
+					ctx.arc(x, y, 20, 0, Math.PI*2);
+					ctx.closePath();
+					ctx.fillStyle = "#1663BE";
+					ctx.fill();
+					ctx.lineWidth = 4;
+					if (shots[shotID].validSolve) ctx.strokeStyle = "#50C878"; //If it's a valid solve circle it in green.
+					else ctx.strokeStyle = "red"; //if it's not a valid solve circle it in red
+					ctx.stroke();		
+					
+					//Draw shot marker text
+					ctx.font = "26px Arial";				
+					ctx.fillStyle = "white";
+					if(shotID == 9){ 
+						ctx.fillText("C", x, y);
+					}
+					else{ 
+						ctx.fillText(shotID+1, x, y);
+					}
+					
+					//Draw delay marker
+					ctx.beginPath();
+					ctx.arc(x+25, y+10, 15, 0, Math.PI*2);
+					ctx.closePath();
+					ctx.fillStyle = "#DDDDDD";
+					ctx.fill();
+					ctx.font = "14px Arial";
+					ctx.fillStyle = "black";
+					ctx.fillText(shotPattern[i].delay + "s", x+25, y+10);
+				}
+				
+				if (i>0){
+					//Draw clear shot pattern button
+					var column = Math.floor(i/((canvas.height - 50)/50+1));
+					var row = Math.floor(i/shotsPerRow);
+					var x = 45-translateX -row*(shotsPerRow*70) + 70*i ;
+					var y = 25-translateY +row*50 ;
+					
+					ctx.beginPath();
+					ctx.arc(x, y, 22, 0, Math.PI*2);
+					ctx.closePath();
+					ctx.fillStyle = "red";
+					ctx.fill();
+					ctx.font = "14px Arial";
+					ctx.fillStyle = "white";
+					ctx.fillText("Clear", x, y-4);
+					ctx.fillText("All", x, y+10);
+				}
+				
+				
+				//Draw the stop/play button
+				var x = canvas.width - 25-translateX;
+				var y = canvas.height - 25-translateY;
+				var showPlayButton=false;
+				
+				ctx.beginPath();
+				ctx.arc(x, y, 20, 0, Math.PI*2);
+				ctx.closePath();
+				if (launcherStopped) ctx.fillStyle = "green"; //Play Button Green
+				else ctx.fillStyle = "red"; //Stop Button Red
+				ctx.fill();
+				ctx.lineWidth = 4;			
+				
+				//Draw Play/Stop symbol			
+				ctx.fillStyle = "white";
+				if(launcherStopped){ 
+					ctx.beginPath();
+					ctx.moveTo(x+11,y);
+					ctx.lineTo(x-5,y+9);
+					ctx.lineTo(x-5,y-9);
+					ctx.fill();					
+				}
+				else{ 
+					ctx.fillRect(x-8,y-8,16,16);
+				}
+			};
+
+			
+
+			function rotatePointCloud(inputPointCloud){
+					var sinThetaX = Math.sin(-rotx);
+					var cosThetaX = Math.cos(-rotx);	
+					var sinThetaY = Math.sin(-roty);
+					var cosThetaY = Math.cos(-roty);	
+					var sinThetaZ = Math.sin(rotz);
+					var cosThetaZ = Math.cos(rotz);
+					
+				for (var i=0; i<inputPointCloud.length; i++) {
+					var inputPoint = inputPointCloud[i];
+					var x = inputPoint.x;
+					var y = inputPoint.y;
+					var z = inputPoint.z;
+							
+					//rotateX // Rotate shape around the x-axis, i.e. the non-rotated axis, horizontal to the screen.
+					var storedY = y;
+					y = y * cosThetaX - z * sinThetaX;
+					z = z * cosThetaX + storedY * sinThetaX ;	
+							
+					//rotateY // Rotate shape around the y-axis, i.e. the non-rotated axis, vertical to the screen. 
+					var storedX = x;
+					x = x * cosThetaY - z * sinThetaY ;
+					z = z * cosThetaY + storedX * sinThetaY;			
+					
+					//rotateZ // Rotate shape around the z-axis, i.e. the non-rotated axis, perpendicular to the screen.
+					var storedX = x;
+					x = x * cosThetaZ - y * sinThetaZ;
+					y = y * cosThetaZ + storedX * sinThetaZ ;
+
+					//Save out adjusted values
+					inputPoint.x = x;
+					inputPoint.y = y;
+					inputPoint.z = z;
+					
+					//console.log("Forward Rotation X: " + Math.round(x*10)/10 + " , Y: " + Math.round(y*10)/10+ " , Z: " + Math.round(z*10)/10);					
+				}
+				
+			}
+			function getCourtPosition(e){						
+					//get the canvas click position
+					var canvasPoint = getCanvasRelative(e);
+					
+					//create the screen normal in the court world position
+					var screenNormal = [{x:0, y:0, z:1}];
+					rotatePointCloud(screenNormal);
+					
+					//set the court input value positions.
+					var courtPosition = [{x:canvasPoint.x/scale, y:canvasPoint.y/scale, z:0}];
+					
+					//Based on the screen normal and known screen plane intercept of 0,0,0. The value of Z for the click can be calculated:
+					courtPosition[0].z  = (screenNormal[0].x*courtPosition[0].x + screenNormal[0].y*courtPosition[0].y)/- screenNormal[0].z;							
+					
+					//This can then be rotated back to it's court equivalent.
+					rotatePointCloudReverse(courtPosition);		
+					
+					//console.log("Court Point X: " + Math.round(courtPosition[0].x*1000)/1000 + " , Y: " + Math.round(courtPosition[0].y*1000)/1000+ " , Z: " + Math.round(courtPosition[0].z*1000)/1000);
+					return courtPosition;					
+			}
+			function rotatePointCloudReverse(inputPointCloud){
+					var sinThetaX = Math.sin(rotx);
+					var cosThetaX = Math.cos(rotx);	
+					var sinThetaY = Math.sin(roty);
+					var cosThetaY = Math.cos(roty);	
+					var sinThetaZ = Math.sin(-rotz);
+					var cosThetaZ = Math.cos(-rotz);
+					
+				for (var i=0; i<inputPointCloud.length; i++) {
+					var inputPoint = inputPointCloud[i];
+					var x = inputPoint.x;
+					var y = inputPoint.y;
+					var z = inputPoint.z;
+					
+					//rotateZ // Rotate shape around the z-axis, i.e. the non-rotated axis, perpendicular to the screen.
+					var storedX = x;
+					x = x * cosThetaZ - y * sinThetaZ;
+					y = y * cosThetaZ + storedX * sinThetaZ ;
+					
+					//rotateY // Rotate shape around the y-axis, i.e. the non-rotated axis, vertical to the screen. 
+					var storedX = x;
+					x = x * cosThetaY - z * sinThetaY ;
+					z = z * cosThetaY + storedX * sinThetaY;		
+					
+					//rotateX // Rotate shape around the x-axis, i.e. the non-rotated axis, horizontal to the screen.
+					var storedY = y;
+					y = y * cosThetaX - z * sinThetaX;
+					z = z * cosThetaX + storedY * sinThetaX ;	
+					
+					//Save out adjusted values
+					inputPoint.x = x;
+					inputPoint.y = y;
+					inputPoint.z = z;
+					
+					//console.log("Reverse Rotation X: " + Math.round(x*10)/10 + " , Y: " + Math.round(y*10)/10+ " , Z: " + Math.round(z*10)/10);					
+				}
+			}
+
+			function findVelocityFromIC(shot, targetDistance = -1, minV=0, maxV=100, recursionCount = 0){
+
+				//calculate the angle required to hit the point directly. Allow the wheels to adjust for about 5 degrees.
+				var requiredRotation = Math.atan((shot.x -launcherX)/(shot.y-launcherY))/Math.PI*180;
+				var shotFinalRotation = parseFloat(shot.rotation)+ Math.min(Math.max(requiredRotation-shot.rotation,-maxWheelCorrection),maxWheelCorrection);
+				
+				
+				document.getElementById("wheelRot_output").innerHTML="&emsp;&emsp;Wheel Correction: " + Math.round(Math.min(Math.max(requiredRotation-shot.rotation,-maxWheelCorrection),maxWheelCorrection)*10)/10;
+				
+				
+				//console.log("Target Distance: "+targetDistance);
+				if (targetDistance==-1) targetDistance = Math.sqrt(Math.pow(shot.x -launcherX,2) + Math.pow(shot.y-launcherY,2));
+				if(recursionCount==0)
+				{			
+					//First check if the points is outside of the possible shot range.
+					var flightPath= computeTrajectoryFromIC (0 , launcherZ, minV , shot.trajectory/180*Math.PI, 0.01 );
+					if (targetDistance<=flightPath.rf[flightPath.rf.length-1]){
+						//requested shot is shorter than minimum velocity allows. Return minimum velocity.
+						var wheelSpeeds = getWheelSpeeds(shot.rotation, shot.x, shot.y, minV);
+						return {v:minV,validSolve:false, rotation:shotFinalRotation, lm_speed:wheelSpeeds.leftWheelRPM,rm_speed:wheelSpeeds.rightWheelRPM };
+					}
+					
+					var flightPath= computeTrajectoryFromIC (0 , launcherZ, maxV , shot.trajectory/180*Math.PI, 0.01 );
+					if (targetDistance>=flightPath.rf[flightPath.rf.length-1]){
+						//requested shot is longer than maximum velocity allows. Return maximum velocity.
+						var wheelSpeeds = getWheelSpeeds(shot.rotation, shot.x, shot.y, maxV);
+						return {v:maxV,validSolve:false, rotation:shotFinalRotation, lm_speed:wheelSpeeds.leftWheelRPM,rm_speed:wheelSpeeds.rightWheelRPM };
+					}	
+					
+				}
+				
+				var velocityMidpoint = (minV + maxV)/2;
+				var flightPath= computeTrajectoryFromIC (0 , launcherZ, velocityMidpoint, shot.trajectory/180*Math.PI, 0.01 );
+				if (recursionCount>500){
+					console.log("Failed to find exact shot velocity. Last evaluating velocity = " + velocityMidpoint);
+					var wheelSpeeds = getWheelSpeeds(shot.rotation, shot.x, shot.y, velocityMidpoint);
+					return {v:velocityMidpoint,validSolve:false, rotation:shotFinalRotation, lm_speed:wheelSpeeds.leftWheelRPM,rm_speed:wheelSpeeds.rightWheelRPM };
+				}
+				else{		
+					if(Math.abs(targetDistance-flightPath.rf[flightPath.rf.length-1])<0.05){
+						//console.log("Required Shot Velocity = " + velocityMidpoint);
+						
+						//get point landing spot taking into acount the rotation of the unit and see if the final deviation is acceptable.
+						//We've already checked length so probably check landing point compared to target, or maybe just check if it's within the variable wheel speed angle control.
+						
+
+						
+						
+
+						
+						var landingX=flightPath.rf[flightPath.rf.length-1]*Math.sin(shotFinalRotation/180*Math.PI)+launcherX;
+						var landingY=flightPath.rf[flightPath.rf.length-1]*Math.cos(shotFinalRotation/180*Math.PI)+launcherY;
+						var landingDv= Math.sqrt(Math.pow(landingX-shot.x,2)+Math.pow(landingY-shot.y,2));
+						
+						if (landingDv<.05) {
+							//If a solution is found that's within the landing zone then find the wheel speeds & return the solution values.
+							var wheelSpeeds = getWheelSpeeds(shot.rotation, shot.x, shot.y, velocityMidpoint);
+							return {v:velocityMidpoint,validSolve:wheelSpeeds.valid, rotation:shotFinalRotation, lm_speed:wheelSpeeds.leftWheelRPM,rm_speed:wheelSpeeds.rightWheelRPM };
+						}
+						else {
+							var wheelSpeeds = getWheelSpeeds(shot.rotation, shot.x, shot.y, velocityMidpoint);
+							return {v:velocityMidpoint,validSolve:false, rotation:shotFinalRotation, lm_speed:wheelSpeeds.leftWheelRPM,rm_speed:wheelSpeeds.rightWheelRPM };
+						}
+							
+						
+						
+						
+					}
+					else{
+					
+						//console.log("Testing Velocity = " + velocityMidpoint);
+						if (flightPath.rf[flightPath.rf.length-1]>targetDistance){
+							return findVelocityFromIC(shot, targetDistance, minV, velocityMidpoint, recursionCount+1);
+						}
+						else{
+							return findVelocityFromIC(shot, targetDistance, velocityMidpoint , maxV, recursionCount+1);
+						}		
+					}
+					//return velocityMidpoint;
+				}
+			}
+
+			function getWheelSpeeds(rotation, x, y, v0){			
+				//Calculation of wheel speed.
+				
+				//Increase or decrease the speed the wheels calculate for based on the velocity correction value.
+				//Purpose is to get the shots to land in the expected spot.
+				v0 *=1+vel_correction/100;
+				
+				var requiredRotation = Math.atan((x -launcherX)/(y-launcherY))/Math.PI*180;			
+				
+				var wheelImpartAngle = requiredRotation-rotation; //In degrees
+				var wheelRadius = 104/1000/2; //In m
+
+				var releaseAngle = 16.7;//Solved graphically.
+				
+				releaseAngle = releaseAngle/180*Math.PI; //Convert to radians
+				wheelImpartAngle = wheelImpartAngle/180*Math.PI; //Convert to radians
+				
+				//The velYComponent component must be V0 to achieve the required shuttle distance.
+				var velXComponent= Math.tan(wheelImpartAngle)*v0;
+				var v1 = (v0*2/Math.cos(releaseAngle)  + velXComponent*2/Math.sin(releaseAngle))/2
+				var v2 = v1 - velXComponent*2/Math.sin(releaseAngle)
+
+				//This will update the variables passed to the function.
+				var rightWheelRPM = parseInt(v1 / wheelRadius / (2*Math.PI)*60);
+				var leftWheelRPM = parseInt(v2 / wheelRadius / (2*Math.PI)*60);		
+				//DEBUG
+				console.log("x: " + (x -launcherX) + " y: " + (y-launcherY) + " d: " + Math.round(Math.sqrt(Math.pow(x -launcherX,2)+Math.pow(y-launcherY,2))*10)/10+ " rot_total: " +  Math.round(requiredRotation*10)/10+ " rot_wheels: " +  Math.round(wheelImpartAngle/Math.PI*180*10)/10 + " V0 "+ Math.round(v0*100)/100 + "m/s  Wheel " + Math.round(leftWheelRPM) + ","+Math.round(rightWheelRPM) + "rpm");
+				
+				//If either motor speed is less than 500 then the shot cannot be achieved.
+				var valid = leftWheelRPM>=minWheelSpeed && rightWheelRPM>=minWheelSpeed && leftWheelRPM<=maxWheelSpeed && rightWheelRPM<=maxWheelSpeed;				
+				return {leftWheelRPM:leftWheelRPM,rightWheelRPM:rightWheelRPM, valid:valid};
+				
+				}
+			function computeTrajectoryFromIC (r0 , z0 , V0 , theta0, ds_a = 0.0100){
+				//var r0= 0;//Initial radius???
+				//var z0=0.325;//Initial height in m.		
+				//var theta0 = 0.785;//Initial trajectory in radians. 45 degrees.
+				/*
+				The MATLAB function called computeTrajectoryFromIC takes as inputs r0, z0, V0, theta0
+				and simulation_parameters respectively corresponding to the initial position and the initial
+				velocity of the shuttlecock expressed in standard units and in the main frame of the plane P, the
+				initial angle expressed in radians and the simulation parameters. It returns the positions of the
+				shuttlecock in the main frame of the plane P, at every time ti = i dt, as a pair of two vectors rf
+				and zf. Equation 2.3, Equation 2.5 and Equation 2.6 can then be used to compute the trajectory
+				of the shuttlecock with respect to (r0, z0, V0, theta0, simulation_parameters).
+				
+				The terminal velocity and integrator's parameters are dened in the rst three lines of the func-
+				tion as V_inf, sa_lim which corresponds to s(tf ), and ds_a, which corresponds to ds. The
+				function computeTrajectoryFromIC will then return the trajectory of the shuttlecock, discret-
+				ized with an increment of d_sa and with 0  s  sa_lim. The number of computed points
+				is N = sa_lim/ds_a+1. It is important to notice that ds_a must be chosen so that sa_lim/
+				ds_a is an integer. We can then pre-allocate the memory to store the vectors r, z, Vr, Vz, dVr
+				and dVz, respectively corresponding to the position, velocity and acceleration of the shuttle-
+				cock, to make the simulation time lower. We can use the function zeros(number_of_rows,
+				number_of_columns) to pre-initialize a variable. It creates a null matrix with number_of_rows
+				rows and number_of_columns columns. In our case, r, z, Vr and Vz, are column vectors with N
+				elements, each element corresponding to the value at the curvilinear abscissa si. Vectors dVr and
+				dVz are similar but they only have N 􀀀 1 elements because the acceleration is not determined
+				in the initial state. Vectors r, z, Vr and Vz are finally initialized with respect to the initial
+				conditions. The first loop then computes the positions of the shuttlecock in the plane P at every
+				time ti. The second loop computes the output vectors rf and zf that are r and z truncated at
+				the time at which the shuttlecock touches the ground.
+				
+				
+				
+				- Mass of the shuttlecock : m = 5; 3 g
+				- Radius of the shuttlecock : R = 3; 4 cm
+				- Specific surface of the shuttlecock : Ss = PI*R^2
+				- Gravitation constant : g = 9.81 m/s^2
+				- Drag coefficient : CD = 0.65
+				- Air density : row_air = 1; 225 kg/m^3 for T = 15 Degrees C
+				- Velocity : V = ||V||
+				- Initial velocity : V0 = ||V(t = 0)||
+				- Terminal velocity : Vinf = ||V(t->inf)|| = 6.7 m*s^-1
+				- Aerodynamic length : L = Vinf^2/g
+				- Adimensional velocity : V = V/V0
+				- Adimensional curvilinear abscissa : s = s/L
+				//d_Wheel - Feeder Wheel Diameter (mm)
+				*/
+				
+			
+				
+				
+				
+				
+				var V_inf = 6.7; //Terminal Velocity of the shuttlecock. (m/s)
+				var sa_lim = 6; //Adimensional curvilinear abscissa limit (s). Set to 5s.
+				//var ds_a = 0.0100; //Adimensional curvilinear abscissa increment. Flight path step size. (s)				
+				
+				//calibration correction? 
+				V_inf *=1+flight_correction/100;
+				
+				var L = Math.pow(V_inf,2)/9.81;
+				var r = zeros ( sa_lim / ds_a +1); //distance of bird.
+				var z = zeros ( sa_lim / ds_a +1); //height of bird.
+				var Vr = zeros ( sa_lim / ds_a +1); //distance component of velocity
+				var Vz = zeros ( sa_lim / ds_a +1); //height component of velocity
+				var dVr = zeros ( sa_lim / ds_a); //distance component of acceleration
+				var dVz = zeros ( sa_lim / ds_a);//height component of acceleration
+				r[0] = r0;
+				z[0] = z0;
+				Vr[0] = V0*Math.cos(theta0);
+				Vz[0] = V0*Math.sin(theta0);
+				
+				
+
+				for (var i = 0; i < sa_lim / ds_a; i++){
+					dVr[i] = ds_a *(- Vr[i]);
+					//console.log(i + "," + V0 + "," + ds_a + "," + V_inf + "," + Vr[i] + "," + Vz[i]);
+					dVz[i] = V0 * ds_a *(-Math.pow((V_inf/V0),2)/ Math.sqrt(Math.pow((Vr[i]/V0),2)+Math.pow((Vz[i]/V0),2))-Vz[i]/V0)
+					//console.log("dVr: " + dVr[i] + ", dVz:" + dVz[i]);
+					Vr[i+1] = Vr[i] + dVr[i];
+					Vz[i+1] = Vz[i] + dVz[i];
+					//console.log("Vr[i+1]: " + Vr[i+1] + ", Vz[i+1]:" + Vz[i+1]);
+					var dt = ds_a*L/ Math.sqrt (Math.pow(Vr[i+1],2) + Math.pow(Vz[i+1],2));
+					r[i+1] = r[i] + dt*Vr[i+1];
+					z[i+1] = z[i] + dt*Vz[i+1];
+					//console.log("r: " + r[i] + ", Z:" + z[i]);
+				}
+				
+				//Find the portion of the path that is above ground and return that.
+				var ground = 0;
+				while (ground < sa_lim / ds_a && z[ground] >= 0){				
+					ground = ground + 1;		
+				}
+				var rf = r.slice(0, ground ),
+					zf = z.slice(0, ground );
+				return {rf, zf};
+			}
+			
+			function zeros(arrayLength)
+			{
+				var zeroArray = [arrayLength];
+				for(var i=0;i<arrayLength;i++){
+					zeroArray[i] = 0.0;
+				}
+				return zeroArray;			
+			}
+			
+			
+			var defaultDelay = 2;
+			
+			var statusElement;
+			window.onload = function() {
+				// Connect to WebSocket server
+				wsConnect(url);
+				
+				
+				
+									
+				statusElement = document.getElementById('statusBanner');
+				
+				//setup the slider inputs and outputs
+				var traj_slider = document.getElementById("traj_slider");
+				var traj_output = document.getElementById("traj_output");
+				var rot_slider = document.getElementById("rot_slider");
+				var rot_output = document.getElementById("rot_output");
+				var delay_slider = document.getElementById("delay_slider");
+				var delay_output = document.getElementById("delay_output");
+				var vel_correction_slider = document.getElementById("vel_correction_slider");
+				var vel_correction_output = document.getElementById("vel_correction_output");
+				var flight_correction_slider = document.getElementById("flight_correction_slider");
+				var flight_correction_output = document.getElementById("flight_correction_output");
+				var height_slider = document.getElementById("height_slider");
+				var height_output = document.getElementById("height_output");
+				
+				// Display the default slider value
+				traj_output.innerHTML = traj_slider.value; 
+				rot_output.innerHTML = rot_slider.value;
+				delay_output.innerHTML = delay_slider.value; 
+				vel_correction_output.innerHTML = vel_correction_slider.value;
+				flight_correction_output.innerHTML = flight_correction_slider.value;
+				height_output.innerHTML = height_slider.value; 			
+
+				defaultDelay = delay_slider.value;
+
+				// Update the current slider value (each time you drag the slider handle)
+				traj_slider.oninput = function() {
+					traj_output.innerHTML = this.value;
+					if (pHitShotMarker !=-1){
+						shots[pHitShotMarker].trajectory = this.value;
+						/*
+						var result = findVelocityFromIC(shots[pHitShotMarker]);
+						shots[pHitShotMarker].v0=result.v;
+						shots[pHitShotMarker].validSolve = result.validSolve;
+						shots[pHitShotMarker].lm_speed = result.lm_speed;
+						shots[pHitShotMarker].rm_speed = result.rm_speed;
+						*/
+						//recalculate_required = true;
+						recalculate();
+					}
+					
+				}
+				rot_slider.oninput = function() {
+					rot_output.innerHTML = this.value;
+					if (pHitShotMarker !=-1){ 
+						shots[pHitShotMarker].rotation = this.value;
+						/*
+						var result = findVelocityFromIC(shots[pHitShotMarker]);
+						shots[pHitShotMarker].v0=result.v;
+						shots[pHitShotMarker].validSolve = result.validSolve;
+						shots[pHitShotMarker].lm_speed = result.lm_speed;
+						shots[pHitShotMarker].rm_speed = result.rm_speed;
+						*/
+						//recalculate_required = true;
+						recalculate();
+					}
+				}
+				delay_slider.oninput = function() {
+					delay_output.innerHTML = this.value;
+					defaultDelay = this.value;
+				}
+				vel_correction_slider.oninput = function() {
+					vel_correction_output.innerHTML = this.value;
+					vel_correction= Number(this.value);
+					recalculate();
+				}
+				flight_correction_slider.oninput = function() {
+					flight_correction_output.innerHTML = this.value;
+					flight_correction= Number(this.value);
+					recalculate();
+				}
+				height_slider.oninput = function() {
+					height_output.innerHTML = this.value;
+					launcherZ= Number(this.value);
+					recalculate();
+				}
+
+
+				let activeSectionString = location.hash;
+				activeSectionString =activeSectionString.slice(1);
+				console.log(activeSectionString);
+				if(activeSectionString!=""){
+					hideExcept(activeSectionString);
+				}
+				else{
+					hideExcept("main");
+				}
+					
+				sizeCanvas();
+				
+				
+				loadPreset(); //load in shots
+				recalculate();
+
+			}
+			
+			// Load the shot that is being edited into the sliders for control.
+			function loadShotToSliders(){
+				document.getElementById("traj_slider").disabled = false;
+				document.getElementById("rot_slider").disabled = false;	
+				var traj_slider = document.getElementById("traj_slider");
+				var traj_output = document.getElementById("traj_output");
+				var rot_slider = document.getElementById("rot_slider");
+				var rot_output = document.getElementById("rot_output");
+				var delay_slider = document.getElementById("delay_slider");
+				var delay_output = document.getElementById("delay_output");
+				var vel_correction_slider = document.getElementById("vel_correction_slider");
+				var vel_correction_output = document.getElementById("vel_correction_output");
+				var flight_correction_slider = document.getElementById("vel_correction_slider");
+				var flight_correction_output = document.getElementById("vel_correction_output");
+				var shotID_output = document.getElementById("shotID_output");
+				traj_slider.value = shots[pHitShotMarker].trajectory;
+				traj_output.innerHTML = shots[pHitShotMarker].trajectory;
+				rot_slider.value = shots[pHitShotMarker].rotation;
+				rot_output.innerHTML = shots[pHitShotMarker].rotation;		
+				shotID_output.innerHTML=pHitShotMarker+1;
+				if (pHitShotMarker+1 == 10) shotID_output.innerHTML='Custom';
+			}
+			//Clear edited shot.
+			function clearShotSliders(){
+				var shotID_output = document.getElementById("shotID_output");
+				document.getElementById("traj_slider").disabled = true;
+				document.getElementById("rot_slider").disabled = true;		
+				
+				shotID_output.innerHTML='No Shot Selected';
+			}
+			
+			//Hide all sections except automatic or currently selected one.
+			function hideExcept(hideException){					
+				//<section id="main">
+				document.getElementById("main").style.display = "none";
+				document.getElementById("instructions").style.display = "none";
+				document.getElementById("setup").style.display = "none";
+				
+				if (hideException) {
+					if (document.getElementById(hideException)){
+						document.getElementById(hideException).style.display = "block";
+					}
+				}
+				
+			}
+
+			// Call this to connect to the WebSocket server
+			var url;
+			var websocket;
+			if (window.location.hostname ==""){
+				var url = "ws://192.168.4.1:81/";
+			}
+			else{
+				var url = "ws://" + window.location.hostname + ":81/";
+			}
+			function wsConnect(url) {				
+				// Connect to WebSocket server
+				websocket = new WebSocket(url);
+				
+				console.log("Connecting to: " + url);
+				
+				// Assign callbacks
+				websocket.onopen = function(evt) { onOpen(evt) };
+				websocket.onclose = function(evt) { onClose(evt) };
+				websocket.onmessage = function(evt) { onMessage(evt) };
+				websocket.onerror = function(evt) { onError(evt) };
+			}
+
+			// Called when a WebSocket connection is established with the server
+			function onOpen(evt) {
+				// Log connection state
+				console.log("Connected");
+				updateStatus("Connected","green");			
+			}
+
+			// Called when the WebSocket connection is closed
+			function onClose(evt) {
+				// Log disconnection state
+				console.log("Disconnected");
+				updateStatus("Not Connected","red");	
+	
+				
+				// Try to reconnect after a few seconds
+				setTimeout(function() { wsConnect(url) }, 2000);
+			}
+			
+			setInterval(refreshStatus,1000);
+			function refreshStatus(){
+				let statusText = activeStatus;				
+				let currentTime = new Date();				
+				if ((currentTime-lastStatusTime  < lastStatusHoldTime || currentTime-secondLastStatusTime < secondLastStatusHoldTime) && lastStatus!="") statusText=lastStatus + "..." + statusText;
+				if (currentTime-secondLastStatusTime < secondLastStatusHoldTime && secondLastStatus!="") statusText=secondLastStatus + "..." + statusText;
+				statusElement.textContent =  statusText;
+				statusElement.style.background = activeStatusColor;
+			}
+			
+			var activeStatus = "";
+			var activeStatusColor = "red"
+			var activeStatusHoldTime = 10000;
+			let activeStatusTime = new Date();
+			var secondLastStatus = "";
+			var secondLastStatusHoldTime = 10000;
+			let secondLastStatusTime = new Date();
+			var lastStatus = "";
+			var lastStatusHoldTime = 10000;
+			let lastStatusTime = new Date();
+			function updateStatus(message, color){
+			
+				if(lastStatus!=message){			
+					secondLastStatus = lastStatus;
+					secondLastStatusTime = lastStatusTime;
+					secondLastStatusHoldTime = lastStatusHoldTime;
+					
+					lastStatus = activeStatus;
+					lastStatusTime = activeStatusTime;
+					lastStatusHoldTime = activeStatusHoldTime;
+					
+					activeStatus = message;	
+					activeStatusColor = color;	
+					activeStatusTime =  new Date();
+					
+					if (activeStatusColor == "green") activeStatusHoldTime = 500;
+					else if (activeStatusColor == "yellow") activeStatusHoldTime = 5000;
+					else if (activeStatusColor == "red") activeStatusHoldTime = 10000;
+					else  activeStatusHoldTime = 10000;
+					
+					
+					if(message == "Stopping"){
+						launcherStopped=true;
+						drawFunction(); //Redraw needed to change play button to stop button on canvas.
+						updateStatus ("Ready", "green");
+					}
+					refreshStatus();
+				}
+			
+			}
+			
+
+			// Called when a message is received from the server
+			function onMessage(evt) {
+
+				// Print out our received message
+				console.log("Received: " + evt.data);
+				
+				// Parse the JSON object
+				var obj = JSON.parse(evt.data);
+				
+				// Determine the type of message & parse it accordingly.
+				if (obj.command == "status"){
+					updateStatus(obj.statusText,obj.statusColor);
+				}
+				if (obj.command == "load_setup_values"){
+					document.getElementById('gripper_open_pos').value=obj.gripper_open;
+					document.getElementById('gripper_closed_pos').value=obj.gripper_closed;
+					document.getElementById('pusher_catch_pos').value=obj.pusher_catch;
+					document.getElementById('pusher_push_pos').value=obj.pusher_push;
+					
+					document.getElementById('setup_traj_correction').value=obj.traj_correction;
+					document.getElementById('setup_rpm_low_actual').value=obj.rmpLowSetPoint;
+					document.getElementById('setup_rpm_high_actual').value=obj.rmpHighSetPoint;
+					
+					vel_correction= Math.round(Number(obj.velocity_correction)*100)/100;					
+					flight_correction=  Math.round(Number(obj.flight_correction)*100)/100;					
+					launcherZ= Math.round(Number(obj.height)*100)/100;
+					
+					document.getElementById('vel_correction_slider').value=vel_correction;
+					document.getElementById('vel_correction_output').innerHTML=vel_correction;
+					document.getElementById('flight_correction_slider').value=flight_correction;
+					document.getElementById('flight_correction_output').innerHTML=flight_correction;
+					document.getElementById('height_slider').value=launcherZ;
+					document.getElementById('height_output').innerHTML=launcherZ;
+					recalculate();
+  
+				}
+				/* Presets work so no need to save your positions
+				if (obj.command == "load_shot_values"){
+					//Load the launcher height
+					document.getElementById('height_slider').value=obj.height;
+					
+					//Load saved shots
+					for(let i = 0; i<obj.shots.length;i++){
+						shots[i].x=obj.shots[i].x;
+						shots[i].y=obj.shots[i].y;
+						shots[i].rotation=obj.shots[i].rotation;
+						shots[i].trajectory=obj.shots[i].trajectory;
+					}										
+					recalculate();
+				}
+				*/
+			}
+
+			// Called when a WebSocket error occurs
+			function onError(evt) {
+				console.log("ERROR: " + evt.data);
+			}
+
+			// Sends a message to the server (and prints it to the console)
+			function doSend(command) {
+				
+				if (command=="update_setup_values")
+				{
+					var data = {
+						command: command, 
+						gripper_open_pos:document.getElementById("gripper_open_pos").value,
+						gripper_closed_pos:document.getElementById("gripper_closed_pos").value,
+						pusher_catch_pos:document.getElementById("pusher_catch_pos").value,
+						pusher_push_pos:document.getElementById("pusher_push_pos").value,
+						setup_rpm:document.getElementById("setup_rpm").value,
+						setup_rpm_low:document.getElementById("setup_rpm_low_actual").value,
+						setup_rpm_high:document.getElementById("setup_rpm_high_actual").value,
+						setup_traj_correction:document.getElementById("setup_traj_correction").value
+						
+						
+						
+					};
+				}
+				else if (command=="save_setup_values")
+				{
+					doSend("update_setup_values");
+					var data = {
+						command: command						
+					};
+				}
+				else if (command=="update_shots")
+				{
+					// Simplify the shot data to minimize amount of info sent.
+					var basicShots=[];
+					for(let i = 0; i<shots.length;i++){
+						basicShots.push({x:shots[i].x,y:shots[i].y,rotation:shots[i].rotation, trajectory:shots[i].trajectory, lm_speed:shots[i].lm_speed, rm_speed:shots[i].rm_speed});
+					}
+					
+					var data = {
+						command: command, 
+						height:document.getElementById("height_slider").value,
+						velocity_correction:document.getElementById("vel_correction_slider").value,
+						flight_correction:document.getElementById("flight_correction_slider").value,
+						default_delay:defaultDelay,
+						shots: basicShots						
+					};
+				}
+				else if (command=="save_globals")
+				{
+					var data = {
+						command: command, 
+						height:document.getElementById("height_slider").value,
+						velocity_correction:document.getElementById("vel_correction_slider").value,
+						flight_correction:document.getElementById("flight_correction_slider").value,					
+					};
+				}
+				else if (command=="start")
+				{
+					// JSON Example {"command":"start","play_type":"once","shot_pattern":[{"shotID":6,"delay":"3"}]}    once, repeat, random_order, randsom_shots
+					// Ensure the launcher has the updated shot information.
+					doSend("update_shots");
+					
+					// Simplify the shot pattern data to minimize amount of info sent.
+					var basicShotPattern=[];
+					for(let i = 0; i<shotPattern.length;i++){
+						basicShotPattern.push({shotID:shotPattern[i].shotID,delay:shotPattern[i].delay});
+					}
+					
+					// Send the shot sequence data & play type.
+					var data = {
+						command: command, 
+						play_type: document.querySelector('input[name="play_type"]:checked').value,
+						shot_pattern:basicShotPattern		
+					};
+				}	
+				else if (command=="setup_rpm_run")
+				{
+					var data = {
+						command: command,
+						setup_rpm: document.getElementById("setup_rpm").value
+					};
+				}
+				else if (command=="setup_adjust_rpm")
+				{
+					var data = {
+						command: command,
+						setup_rpm_low:document.getElementById("setup_rpm_low_actual").value,
+						setup_rpm_high:document.getElementById("setup_rpm_high_actual").value
+					};
+				}
+				else if (command=="setup_traj_zero")
+				{
+					var data = {
+						command: command,
+						setup_traj_correction:document.getElementById("setup_traj_correction").value
+					};
+				}
+				else if (command=="setup_update_settings")
+				{
+					var data = {
+						command: command,						
+						shuttle_check:(document.querySelector('input[name="shuttle_check"]:checked').value=="enabled"),
+						obstacle_check:(document.querySelector('input[name="obstacle_check"]:checked').value=="enabled")
+					};
+				}
+				else{
+					//start, stop, setup_pos, setup_gripper_open, setup_gripper_close, setup_esc_min, setup_esc_max, setup_pusher_catch, setup_pusher_push 
+					doSend("update_setup_values");
+					var data = {
+						command: command 						
+					};
+				}				
+				
+				console.log("Sending: " + JSON.stringify(data));
+				websocket.send(JSON.stringify(data));
+			}
+			
+			
+			function loadPreset(){
+				var presetSelected = document.getElementById("preset").value;
+				console.log("Loading Preset: " + presetSelected);
+				//load in any preset entries with the same name
+				shots = [];
+				for (var i=0; i < shotPreset.length; i++) {
+					if (shotPreset[i].preset==presetSelected){
+						shots.push({x:shotPreset[i].x, y:shotPreset[i].y, displayX:-1, displayY:-1, trajectory:shotPreset[i].trajectory, rotation:shotPreset[i].rotation, v0:8, lm_speed:0, rm_speed:0, color:"#0c67fa", validSolve:true});
+					}
+				}
+
+				//If calibration mode is entered force in a certain shot Pattern
+				if (presetSelected	 == "Calibration - Shuttle"){
+					shotPattern = [];
+					shotPattern.push({shotID:0,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:0,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:0,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:1,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:1,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:1,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:2,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:2,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:2,delay:defaultDelay, displayX:0, displayY:0});					
+				}
+				else if(presetSelected	 == "Calibration - Wheel Influence"){
+					shotPattern = [];
+					shotPattern.push({shotID:0,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:0,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:0,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:1,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:1,delay:defaultDelay, displayX:0, displayY:0});
+					shotPattern.push({shotID:1,delay:defaultDelay, displayX:0, displayY:0});
+				}
+				else{
+					shotPattern = [];
+				}
+				recalculate();
+			}
+
+		</script>
+	 </body>
+	 <footer style = "margin-top:0em;padding-top:0em;">
+		<p>Designed by Peter Sinclair</p>
+	 </footer>
+ </html>
