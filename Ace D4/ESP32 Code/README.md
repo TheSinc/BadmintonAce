@@ -1,4 +1,4 @@
-ESP32 Software & Firmware for D4 of the launcher.
+ESP32 Software & Firmware for D4 of the launcher. The code is all working but I'm not happy with the quality of calibration. The code is also a bit of a mess but it's all here for your enjoyment!
 
 The code is for use in the Arduino IDE which is where the ESP32 is programed.
 
